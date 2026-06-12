@@ -1,0 +1,57 @@
+
+nettle 4.0 dropped the length argument from nettle_hash_digest_func
+(digest(ctx, length, dst) -> digest(ctx, dst)); the digest now always
+writes digest_size bytes. dnsmasq 2.91 targets the 3.xx apis. Updates the
+four hash->digest() call sites (which already passed the full
+digest_size) and the null_hash_digest stub signature accordingly.
+
+--- a/src/crypto.c
++++ b/src/crypto.c
+@@ -94,10 +94,8 @@
+   ctx->len += length;
+ }
+  
+-static void null_hash_digest(void *ctx, size_t length, uint8_t *dst)
++static void null_hash_digest(void *ctx, uint8_t *dst)
+ {
+-  (void)length;
+-  
+   ((struct null_hash_digest *)dst)->buff = null_hash_buff;
+   ((struct null_hash_digest *)dst)->len = ((struct null_hash_ctx *)ctx)->len;
+ }
+--- a/src/dnssec.c
++++ b/src/dnssec.c
+@@ -657,7 +657,7 @@
+ 	    }
+ 	}
+      
+-      hash->digest(ctx, hash->digest_size, digest);
++      hash->digest(ctx, digest);
+       
+       /* namebuff used for workspace above, restore to leave unchanged on exit */
+       p = (unsigned char*)(rrset[0]);
+@@ -837,7 +837,7 @@
+ 		 rather then O(keys x DSs) */
+ 	      hash->update(ctx, (unsigned int)wire_len, (unsigned char *)name);
+ 	      hash->update(ctx, (unsigned int)rdlen, psave);
+-	      hash->digest(ctx, hash->digest_size, digest);
++	      hash->digest(ctx, digest);
+ 	      
+ 	      from_wire(name);
+ 
+@@ -1342,13 +1342,13 @@
+  
+   hash->update(ctx, to_wire(in), (unsigned char *)in);
+   hash->update(ctx, salt_len, salt);
+-  hash->digest(ctx, hash->digest_size, digest);
++  hash->digest(ctx, digest);
+ 
+   for(i = 0; i < iterations; i++)
+     {
+       hash->update(ctx, hash->digest_size, digest);
+       hash->update(ctx, salt_len, salt);
+-      hash->digest(ctx, hash->digest_size, digest);
++      hash->digest(ctx, digest);
+     }
+    
+   from_wire(in);

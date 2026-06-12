@@ -1,0 +1,12 @@
+--- a/src/forward.c
++++ b/src/forward.c
+@@ -56,7 +56,8 @@
+   msg.msg_iov = iov;
+   msg.msg_iovlen = 1;
+   
+-  if (!nowild)
++  /* lwIP: IP_PKTINFO not supported, always send without cmsg */
++  if (0 && !nowild)
+     {
+       struct cmsghdr *cmptr = msg.msg_control = &control_u.align;
+ 

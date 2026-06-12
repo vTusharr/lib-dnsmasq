@@ -1,0 +1,12 @@
+--- a/src/forward.c
++++ b/src/forward.c
+@@ -1606,8 +1606,9 @@
+   } control_u;
+   int family = listen->addr.sa.sa_family;
+    /* Can always get recvd interface for IPv6 */
+-  int check_dst = !option_bool(OPT_NOWILD) || family == AF_INET6;
++  /* lwIP  IP_PKTINFO not available, skip all pktinfo checks */
++  int check_dst = 0;
+   
+   /* packet buffer overwritten */
+   daemon->srv_save = NULL;

@@ -1,0 +1,43 @@
+--- a/src/netlink.c
++++ b/src/netlink.c
+@@ -101,6 +101,13 @@
+   struct sockaddr_nl nladdr;
+   ssize_t rc;
+ 
++  /*  pre-grow the buffer; one message is delivered per recvmsg. */
++  if (iov.iov_len < 8192 && !expand_buf(&iov, 8192))
++    {
++      errno = ENOMEM;
++      return -1;
++    }
++
+   while (1)
+     {
+       msg.msg_control = NULL;
+@@ -111,24 +118,8 @@
+       msg.msg_iovlen = 1;
+       msg.msg_flags = 0;
+       
+-      while ((rc = recvmsg(daemon->netlinkfd, &msg, flags | MSG_PEEK | MSG_TRUNC)) == -1 &&
+-	     errno == EINTR);
+-      
+-      /* make buffer big enough */
+-      if (rc != -1 && (msg.msg_flags & MSG_TRUNC))
+-	{
+-	  /* Very new Linux kernels return the actual size needed, older ones always return truncated size */
+-	  if ((size_t)rc == iov.iov_len)
+-	    {
+-	      if (expand_buf(&iov, rc + 100))
+-		continue;
+-	    }
+-	  else
+-	    expand_buf(&iov, rc);
+-	}
+-
+-      /* read it for real */
+-      msg.msg_flags = 0;
++      /*  posix-netlink ignores recvmsg flags, so the MSG_PEEK sizing
++	 pass would consume the message and the real read would hang. */
+       while ((rc = recvmsg(daemon->netlinkfd, &msg, flags)) == -1 && errno == EINTR);
+       
+       /* Make sure this is from the kernel */

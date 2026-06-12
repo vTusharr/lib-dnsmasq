@@ -1,0 +1,5 @@
+name        := "dnsmasq"
+description := "A lightweight DNS forwarder and caching server (DNS-only mode for Unikraft)."
+homepage    := "https://thekelleys.org.uk/dnsmasq/doc.html"
+version     := 2.91 sha256:2d26a048df452b3cfa7ba05efbbcdb19b12fe7a0388761eb5d00938624bd76c8 https://thekelleys.org.uk/dnsmasq/dnsmasq-2.91.tar.gz
+license     := "GPL-2.0-or-later"

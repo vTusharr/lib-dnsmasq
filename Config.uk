@@ -1,0 +1,36 @@
+menuconfig LIBDNSMASQ
+	bool "dnsmasq - DNS forwarder and caching server"
+	default n
+	select LIBMUSL
+	select LIBPOSIX_SOCKET
+	select LIBPOSIX_EVENT
+	select LIBPOSIX_USER
+	select LIBPOSIX_PROCESS
+	select LWIP_SOCKET
+	select LWIP_TCP
+	select LWIP_UDP
+	select LWIP_DNS
+	select LWIP_THREADS
+	select LIBMUSL_NETWORK
+	select LWIP_UKNETDEV
+	select LWIP_AUTOIFACE
+	select LWIP_IPV4
+	select LIBPOSIX_NETLINK
+
+if LIBDNSMASQ
+
+config LIBDNSMASQ_MAIN_FUNCTION
+	bool "Provide main function"
+	default n
+
+config LIBDNSMASQ_DNSSEC
+	bool "DNSSEC validation"
+	default y
+	select LIBNETTLE
+	select LIBNETTLE_HOGWEED
+	help
+	  Validate DNSSEC signatures on forwarded answers. Pulls in Nettle's
+	  public-key crypto (libhogweed + mini-gmp). Requires a trust anchor
+	  (the root ds record) via 'trust-anchor=' and 'dnssec' in dnsmasq.conf.
+
+endif

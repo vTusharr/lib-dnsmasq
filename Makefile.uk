@@ -1,0 +1,141 @@
+#  SPDX-License-Identifier: BSD-3-Clause
+#
+#  dnsmasq Makefile.uk
+#
+#  Copyright (c) 2026, Unikraft Contributors. All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions
+#  are met:
+#
+#  1. Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#  2. Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#  3. Neither the name of the copyright holder nor the names of its
+#     contributors may be used to endorse or promote products derived from
+#     this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+
+################################################################################
+# Library registration
+################################################################################
+$(eval $(call addlib_s,libdnsmasq,$(CONFIG_LIBDNSMASQ)))
+
+################################################################################
+# Sources
+################################################################################
+LIBDNSMASQ_VERSION = 2.91
+LIBDNSMASQ_BASENAME = dnsmasq-$(LIBDNSMASQ_VERSION)
+LIBDNSMASQ_URL = https://thekelleys.org.uk/dnsmasq/$(LIBDNSMASQ_BASENAME).tar.gz
+LIBDNSMASQ_PATCHDIR = $(LIBDNSMASQ_BASE)/patches
+$(eval $(call fetch,libdnsmasq,$(LIBDNSMASQ_URL)))
+$(eval $(call patch,libdnsmasq,$(LIBDNSMASQ_PATCHDIR),$(LIBDNSMASQ_BASENAME)))
+
+################################################################################
+# Helpers
+################################################################################
+LIBDNSMASQ_SRC = $(LIBDNSMASQ_ORIGIN)/$(LIBDNSMASQ_BASENAME)/src
+
+################################################################################
+# Library includes
+################################################################################
+# Our stub headers (must come first to override missing system headers)
+CINCLUDES-$(CONFIG_LIBDNSMASQ) += -I$(LIBDNSMASQ_BASE)/include
+
+# dnsmasq source directory (contains dnsmasq.h, config.h, etc.)
+LIBDNSMASQ_CINCLUDES-y += -I$(LIBDNSMASQ_SRC)
+
+# Nettle headers for DNSSEC (<nettle/...>). LIBNETTLE_DIR is defined by
+# libnettle's Makefile.uk; the 'nettle' self-symlink there makes the prefix
+# resolve. Added explicitly because libnettle's exported includes do not
+# propagate to dependent libraries here.
+LIBDNSMASQ_CINCLUDES-$(CONFIG_LIBDNSMASQ_DNSSEC) += -I$(LIBNETTLE_DIR)
+
+################################################################################
+# Flags
+################################################################################
+# Disable optional features — DNS forwarding/caching only
+LIBDNSMASQ_CFLAGS-y += -DNO_DHCP
+LIBDNSMASQ_CFLAGS-y += -DNO_DHCP6
+LIBDNSMASQ_CFLAGS-y += -DNO_TFTP
+LIBDNSMASQ_CFLAGS-y += -DNO_SCRIPT
+LIBDNSMASQ_CFLAGS-y += -DNO_LARGEFILE
+LIBDNSMASQ_CFLAGS-y += -DNO_AUTH
+LIBDNSMASQ_CFLAGS-y += -DNO_INOTIFY
+LIBDNSMASQ_CFLAGS-y += -DNO_DUMPFILE
+LIBDNSMASQ_CFLAGS-y += -DNO_ID
+LIBDNSMASQ_CFLAGS-y += -DNO_IPSET
+LIBDNSMASQ_CFLAGS-y += -DHAVE_LINUX_NETWORK
+LIBDNSMASQ_CFLAGS-y += -DVERSION="\"$(LIBDNSMASQ_VERSION)\""
+LIBDNSMASQ_CFLAGS-y += -Duname=uk_uname
+
+# Suppress warnings for a cleaner build
+LIBDNSMASQ_CFLAGS-y += -Wno-unused-parameter
+LIBDNSMASQ_CFLAGS-y += -Wno-unused-variable
+LIBDNSMASQ_CFLAGS-y += -Wno-unused-but-set-variable
+LIBDNSMASQ_CFLAGS-y += -Wno-sign-compare
+LIBDNSMASQ_CFLAGS-y += -Wno-missing-field-initializers
+
+# Rename main() in dnsmasq.c to dnsmasq_main()
+LIBDNSMASQ_DNSMASQ_FLAGS-y += -Dmain=dnsmasq_main
+
+# On Linux <linux/rtnetlink.h> pulls in <linux/neighbour.h> (struct ndmsg,
+# NDA_*, NUD_* for RTM_NEWNEIGH); lib-lwip's rtnetlink.h does not, so
+# force-include our shim for netlink.c.
+LIBDNSMASQ_NETLINK_FLAGS-y += -include linux/neighbour.h
+
+# DNSSEC validation, enabled via CONFIG_LIBDNSMASQ_DNSSEC (selects hogweed).
+# -DHAVE_DNSSEC turns on the DNSSEC code paths; crypto.c and dnssec.c are added
+# to the build under the same config below. The <nettle/...> include path is
+# added explicitly at -I$(LIBNETTLE_DIR) above.
+LIBDNSMASQ_CFLAGS-$(CONFIG_LIBDNSMASQ_DNSSEC) += -DHAVE_DNSSEC
+
+################################################################################
+# Main wrapper
+################################################################################
+LIBDNSMASQ_SRCS-$(CONFIG_LIBDNSMASQ_MAIN_FUNCTION) += $(LIBDNSMASQ_BASE)/main.c|unikraft
+
+################################################################################
+# DNS core source files (
+################################################################################
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/dnsmasq.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/network.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/forward.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/cache.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/rfc1035.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/util.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/option.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/log.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/loop.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/domain.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/domain-match.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/blockdata.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/edns0.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/rrfilter.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/pattern.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/poll.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/metrics.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/arp.c
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/tables.c
+# netlink.c provides interface discovery (RTM_GETADDR/RTM_GETLINK) against
+#  posix-netlink framework + lwip NETLINK_ROUTE driver (0.21>=).
+LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/netlink.c
+
+# DNSSEC sources (crypto.c and dnssec.c are whole-file #ifdef HAVE_DNSSEC, so
+# they only carry code when CONFIG_LIBDNSMASQ_DNSSEC is enabled).
+LIBDNSMASQ_SRCS-$(CONFIG_LIBDNSMASQ_DNSSEC) += $(LIBDNSMASQ_SRC)/crypto.c
+LIBDNSMASQ_SRCS-$(CONFIG_LIBDNSMASQ_DNSSEC) += $(LIBDNSMASQ_SRC)/dnssec.c

@@ -1,0 +1,25 @@
+--- a/src/network.c
++++ b/src/network.c
+@@ -966,8 +966,8 @@
+       if (!option_bool(OPT_NOWILD))
+ 	{
+ #if defined(HAVE_LINUX_NETWORK) 
+-	  if (setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &opt, sizeof(opt)) == -1)
+-	    goto err;
++	  /* lwIP: IP_PKTINFO not supported, ignore failure */
++	  setsockopt(fd, IPPROTO_IP, IP_PKTINFO, &opt, sizeof(opt));
+ #elif defined(IP_RECVDSTADDR) && defined(IP_RECVIF)
+ 	  if (setsockopt(fd, IPPROTO_IP, IP_RECVDSTADDR, &opt, sizeof(opt)) == -1 ||
+ 	      setsockopt(fd, IPPROTO_IP, IP_RECVIF, &opt, sizeof(opt)) == -1)
+@@ -975,8 +975,9 @@
+ #endif
+ 	}
+     }
+-  else if (!set_ipv6pktinfo(fd))
+-    goto err;
++  else {
++    set_ipv6pktinfo(fd); /* Unikraft/lwIP: may fail, ignore */
++  }
+   
+   return fd;
+ }
