@@ -110,7 +110,7 @@ LIBDNSMASQ_CFLAGS-$(CONFIG_LIBDNSMASQ_DNSSEC) += -DHAVE_DNSSEC
 LIBDNSMASQ_SRCS-$(CONFIG_LIBDNSMASQ_MAIN_FUNCTION) += $(LIBDNSMASQ_BASE)/main.c|unikraft
 
 ################################################################################
-# DNS core source files (
+# DNS core source files
 ################################################################################
 LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/dnsmasq.c
 LIBDNSMASQ_SRCS-y += $(LIBDNSMASQ_SRC)/network.c

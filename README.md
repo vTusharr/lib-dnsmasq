@@ -20,8 +20,8 @@ Interface discovery uses **netlink**: dnsmasq's own `netlink.c` runs
 lwIP `NETLINK_ROUTE` driver, so the library requires **Unikraft >= 0.21.0**
 (and currently `CONFIG_LWIP_IPV6=n`; the route driver does not compile).
 
-The `patches/` directory carries the  adaptations. See the
+The `patches/` directory carries the adaptations. See the
 `dnsmasq` application in the catalog for build/run instructions.
 
 Please refer to the `README.md` as well as the documentation in the `doc/`
-subdirectory of the main unikraft repository.
+subdirectory of the main Unikraft repository.
